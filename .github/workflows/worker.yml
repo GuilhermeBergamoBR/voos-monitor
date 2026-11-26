@@ -1,0 +1,60 @@
+name: worker
+
+on:
+  schedule:
+    - cron: "7 * * * *"          # de hora em hora (minuto 7 evita o pico do :00)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Simular (não grava nem envia)"
+        type: boolean
+        default: false
+      send_test:
+        description: "Enviar alerta de teste no Telegram"
+        type: boolean
+        default: false
+      watch_id:
+        description: "Rodar só este monitoramento (UUID)"
+        type: string
+        default: ""
+
+concurrency:
+  group: worker
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: worker/requirements.txt
+      - run: pip install -r worker/requirements.txt
+      - name: Testes
+        run: python -m pytest -q worker/tests
+      - name: Worker
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PANEL_URL: ${{ vars.PANEL_URL }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ inputs.send_test }}" = "true" ]; then ARGS="$ARGS --send-test"; fi
+          if [ -n "${{ inputs.watch_id }}" ]; then ARGS="$ARGS --watch-id ${{ inputs.watch_id }}"; fi
+          python -m worker.main $ARGS

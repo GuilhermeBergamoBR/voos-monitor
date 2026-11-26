@@ -1,0 +1,17 @@
+# Configuração do worker (o que é por monitoramento fica no painel/Supabase).
+timezone: "America/Sao_Paulo"
+quiet_hours: {start: 22, end: 7}
+
+pricing:
+  iof_pct: 3.5               # IOF de compra em moeda estrangeira (cartão), vigente desde 2025
+  bag_fees:                  # estimativa por pessoa e por trecho quando a tarifa não inclui mala
+    domestic: 150
+    international: 400
+
+quotas:                      # orçamento mensal por API (travas rígidas)
+  serpapi_searches: 250      # plano grátis
+  claude_usd: 2.0
+  reserve_for_alerts: 20     # buscas guardadas para detalhes de alerta/erro tarifário
+
+store_top_n: 5               # itinerários gravados por busca (os mais baratos aceitos)
+health_failures_to_warn: 6
